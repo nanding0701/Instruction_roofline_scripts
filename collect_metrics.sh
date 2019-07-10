@@ -2,10 +2,8 @@
 set -x
 kenrel=(transposeNaive transposeCoalesced)
 #timing for kenrels
-#srun -n 1 nvprof --print-gpu-summary ./transpose |& tee clean.log 
+srun -n 1 nvprof --print-gpu-summary ./transpose |& tee clean.log 
 
-#for nvvp 
-#srun -n 1 nvprof --analysis-metrics --output-profile xdrop.nvvp ./transpose  
 for k in ${kenrel[@]}
 do
 	echo "Profiling kernel: ${k}"
