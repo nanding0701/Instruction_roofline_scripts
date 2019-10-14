@@ -24,4 +24,6 @@ do
 	srun -n 1 nvprof --kernels "${k}" --csv --metrics l2_write_transactions --metrics l2_read_transactions ./transpose |& tee ${k}_l2.log 
 	srun -n 1 nvprof --kernels "${k}" --csv --metrics dram_read_transactions --metrics dram_write_transactions ./transpose |& tee ${k}_dram.log
 	srun -n 1 nvprof --kernels "${k}" --csv --metrics sysmem_read_transactions --metrics sysmem_write_transactions ./transpose |& tee ${k}_sysmem.log	srun -n 1 nvprof --kernels "${k}" --csv --events inst_executed --events thread_inst_executed ./transpose |& tee ${k}_event.lo
+    
+        srun -n 1 nvprof --kernels "${k}" --csv --events inst_executed --events thread_inst_executed ./cudaTensorCoreGemm |& tee ${k}_event.log
 done
