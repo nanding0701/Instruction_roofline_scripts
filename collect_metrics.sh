@@ -12,8 +12,6 @@ do
 	srun -n 1 nvprof --kernels "${k}" --csv --metrics inst_compute_ld_st --metrics ldst_executed --metrics ldst_fu_utilization ./transpose |& tee ${k}_ld.log 
 	srun -n 1 nvprof --kernels "${k}" --csv --metrics inst_bit_convert --metrics inst_control ./transpose |& tee ${k}_set2.log 
 	srun -n 1 nvprof --kernels "${k}" --csv --metrics inst_fp_64  --metrics inst_fp_32 --metrics inst_fp_16 ./transpose |& tee ${k}_set3.log 
-	srun -n 1 nvprof --kernels "${k}" --csv --metrics flop_count_dp --metrics flop_count_sp --metrics flop_count_hp ./transpose |& tee ${k}_set4.log 
-    srun -n 1 nvprof --kernels "${k}" --csv --metrics flop_count_dp_fma ./transpose |& tee ${k}_flop_count_dp_fma.log
 	srun -n 1 nvprof --kernels "${k}" --csv --metrics local_load_transactions --metrics local_store_transactions ./transpose |& tee ${k}_local.log 
 	srun -n 1 nvprof --kernels "${k}" --csv --metrics shared_load_transactions --metrics shared_store_transactions  ./transpose |& tee ${k}_share.log  
 	srun -n 1 nvprof --kernels "${k}" --csv --metrics gst_transactions --metrics gld_transactions ./transpose |& tee ${k}_global.log 
