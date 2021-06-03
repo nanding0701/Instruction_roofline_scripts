@@ -1,0 +1,104 @@
+desciption,nvprof metrics,nsight_compute metrics on V100,alternative nsight compute metrics on V100 (results are same with nvprof), nsight compute metrics on A100
+global memory transactions,gld_transactions,l1tex__t_sectors_pipe_lsu_mem_global_op_ld.sum,,l1tex__t_sectors_pipe_lsu_mem_global_op_ld.sum
+global memory transactions,gst_transactions,l1tex__t_sectors_pipe_lsu_mem_global_op_st.sum,,l1tex__t_sectors_pipe_lsu_mem_global_op_st.sum
+global memory instructions,inst_executed_global_loads,smsp__inst_executed_op_global_ld.sum,smsp__sass_inst_executed_op_global_ld.sum
+global memory instructions,inst_executed_global_stores,smsp__inst_executed_op_global_st.sum,smsp__sass_inst_executed_op_global_st.sum
+
+local memory transactons,local_load_transactions,l1tex__t_sectors_pipe_lsu_mem_local_op_ld.sum,,
+local memory transactons,local_store_transactions,l1tex__t_sectors_pipe_lsu_mem_local_op_st.sum,,
+local memory instructions,inst_executed_local_loads,smsp__inst_executed_op_local_ld.sum,sm__sass_inst_executed_op_local_ld.sum,
+local memory instructions,inst_executed_local_stores,smsp__inst_executed_op_local_st.sum,sm__sass_inst_executed_op_local_st.sum,
+
+shared memory transactions,shared_load_transactions,l1tex__data_pipe_lsu_wavefronts_mem_shared_op_ld.sum,,l1tex__data_pipe_lsu_wavefronts_mem_shared_op_ld.sum
+shared memory transactions,shared_store_transactions,l1tex__data_pipe_lsu_wavefronts_mem_shared_op_st.sum,,l1tex__data_pipe_lsu_wavefronts_mem_shared_op_st.sum
+shared memory instructions,inst_executed_shared_loads,smsp__inst_executed_op_shared_ld.sum,sm__sass_inst_executed_op_shared_ld.sum,sm__sass_inst_executed_op_shared_ld.sum
+shared memory instructions,inst_executed_shared_stores,smsp__inst_executed_op_shared_st.sum,sm__sass_inst_executed_op_shared_st.sum,sm__sass_inst_executed_op_shared_st.sum
+
+l2,l2_read_transactions,lts__t_sectors_op_read.sum + lts__t_sectors_op_atom.sum + lts__t_sectors_op_red.sum,,lts__t_sectors_op_read.sum + lts__t_sectors_op_atom.sum + lts__t_sectors_op_red.sum
+l2,l2_write_transactions,lts__t_sectors_op_write.sum + lts__t_sectors_op_atom.sum + lts__t_sectors_op_red.sum,,lts__t_sectors_op_read.sum + lts__t_sectors_op_atom.sum + lts__t_sectors_op_red.sum
+
+dram,dram_read_transactions,dram__sectors_read.sum,,dram__sectors_read.sum
+dram,dram_write_transactions,dram__sectors_write.sum,,dram__sectors_write.sum
+
+inst,inst_executed,smsp__inst_executed.sum,,smsp__inst_executed.sum
+
+thread-level inst,inst_executed,sm__inst_executed.sum,,sm__inst_executed.sum
+thread-level non-predicated inst,thread_inst_executed,smsp__thread_inst_executed.sum,,smsp__thread_inst_executed.sum
+
+
+integer inst,inst_integer,smsp__sass_thread_inst_executed_op_integer_pred_on.sum,,smsp__sass_thread_inst_executed_op_integer_pred_on.sum 
+flop inst,inst_fp_16,smsp__sass_thread_inst_executed_op_fp16_pred_on.sum,,smsp__sass_thread_inst_executed_op_fp16_pred_on.sum
+flop inst,inst_fp_32,smsp__sass_thread_inst_executed_op_fp32_pred_on.sum,,smsp__sass_thread_inst_executed_op_fp32_pred_on.sum
+flop inst,inst_fp_64,smsp__sass_thread_inst_executed_op_fp64_pred_on.sum,,smsp__sass_thread_inst_executed_op_fp64_pred_on.sum
+
+
+
+*** NOTE for metrics, cuda 11.0.2 ****
+* metrics that are not explicitly said they're thread-level are warp-level
+
+*** Note for shared memory ****
+* smsp__inst_executed_op_shared_ld.sum=smsp__inst_executed_op_shared_ld_pred_on_any.sum and smsp__inst_executed_op_shared_ld_pred_off_all.sum
+* nvprof gives only smsp__inst_executed_op_shared_ld_pred_on_any.sum 
+* In nsight compute, You may see sum(shared ld inst + shared st inst)/sum( shared ld transactions + shared_store_transactions) > 1  which is a high shared memory intensity that can never be attained). 
+* In that case, you can use smsp__inst_executed_op_shared_ld_pred_on_any.sum to count only predicated on instructions
+* Alternatively, you can use smsp__inst_executed_op_shared_ld_pred_on_any.sum with nsight compute
+* Given the way we define instructions executed, the instructions executed counter increments even if every thread in a warp is predicated out. 
+* test_shared.cpp can reproduce this case. script:run_test_shared.sh 
+
+*************************************************************
+cat test_shared.cpp
+            __global__ void test()
+            {
+            __shared__ int s[32];
+            int curr = 0, prev = 0;
+            
+            for (int i = 0; i < 1000; ++i) {
+                prev = curr;
+            
+                int laneId = threadIdx.x % 32;
+                int warpId = threadIdx.x / 32;
+                if (laneId == 31) {   
+                    // each warp writes a value to share memory. In total,you have 1000 (loops) * 4 (warps,128threads) = 4000 warp stroe instructions
+                    s[warpId]  = prev;
+                }
+                __syncthreads();
+            
+                int x = 0;
+                if (warpId != 0 && laneId == 0) { 
+                    // each warp except for warp 0 reads the value. In total,you have 1000 (loops) * 3 (warps,128threads) = 3000 warp load instructions
+                    x = s[warpId - 1];
+                }
+                __syncthreads();
+            
+                curr = x;
+            }
+            }
+            
+            int main()
+            {
+                test<<<1, 128>>>();
+                cudaDeviceSynchronize();
+                return 0;
+            }
+
+cat run_test_shared.sh
+  #!/bin/bash
+  nvcc -arch=sm_70 -x cu test_shared.cpp
+  srun ncu --metrics l1tex__data_pipe_lsu_wavefronts_mem_shared_op_ld.sum,l1tex__data_pipe_lsu_wavefronts_mem_shared_op_st.sum,smsp__inst_executed_op_shared_ld.sum,smsp__inst_executed_op_shared_st.sum,smsp__inst_executed_op_shared_ld_pred_on_any.sum,smsp__inst_executed_op_shared_ld_pred_off_all.sum,l1tex__data_pipe_lsu_wavefronts_mem_shared_op_ld.sum,l1tex__data_pipe_lsu_wavefronts_mem_shared_op_st.sum ./a.out
+
+./run_test_shared.sh
+  ==PROF== Connected to process 56824 (/global/project/projectdirs/m2956/nanding/myprojects/irf/samples/6_Advanced/transpose/a.out)
+  ==PROF== Profiling "test()" - 1: 0%....50%....100% - 4 passes
+  ==PROF== Disconnected from process 56824
+  [56824] a.out@127.0.0.1
+  test(), 2020-Dec-04 16:36:38, Context 1, Stream 7
+  Section: Command line profiler metrics
+   ---------------------------------------------------------------------- --------------- ------------------------------
+   l1tex__data_pipe_lsu_wavefronts_mem_shared_op_ld.sum                                                             3000
+   l1tex__data_pipe_lsu_wavefronts_mem_shared_op_st.sum                                                             4000
+   smsp__inst_executed_op_shared_ld.sum                                              inst                           4000
+   smsp__inst_executed_op_shared_ld_pred_off_all.sum                                 inst                           1000
+   smsp__inst_executed_op_shared_ld_pred_on_any.sum                                  inst                           3000
+   smsp__inst_executed_op_shared_st.sum                                              inst                           4000
+   ---------------------------------------------------------------------- --------------- ------------------------------
+*************************************************************
