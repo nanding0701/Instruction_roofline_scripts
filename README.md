@@ -14,7 +14,6 @@ This repository contains the essential scripts of profiling, building, and visua
 12 arg1=/global/cscratch1/sd/mhaseeb/sw-benchmarks/ref_set_1.fasta
 13 arg2=/global/cscratch1/sd/mhaseeb/sw-benchmarks/read_set_1.fasta
 14 arg3=${apphome}/build/aligned.out
-15
 ```
 
 2. Allocate a GPU node (preferably with `--exclusive`) using the following command:     
@@ -26,19 +25,23 @@ salloc -G 1 -C gpu -t 00:30:00 --exclusive
 3. Run the `collect_metric_extended.sh` script as:     
 
 ```bash
-./collect_metric_extended.sh
+srun ./collect_metric_extended.sh
 ```
 
-4. After completion, copy the `merge.sh` to the `extended_output` folder and run to obtain `Adept_F.csv` and `Adept_R.csv`:     
+4. After profiler completion, run the `merge.sh` to obtain the `Adept_F.csv` and `Adept_R.csv` files using:     
 
 ```bash
-extended_output` using: `cp merge.sh ./extended_output && pushd ./extended_output && ./merge.sh && popd
+srun ./merge.sh ./output_extended
 ```
 
-5. Finally, run the `adept_roofline.py` script to build and visualize the roofline as:     
+5. Finally, run the `adept_roofline.py` script with proper parameters to build and visualize the roofline for both Adept kernels as:     
 
 ```bash
-python ./adept_rooflines.py -f ./extended_output/Adept_F.csv -r ./extended_output/Adept_R.csv && ps2pdf ./adept_glob.eps && ps2pdf ./adept_shm.eps
+# get help on input parameters
+python ./adept_roofline.py --help
+
+# run adept_rooflines.py with correct parameters
+srun python ./adept_rooflines.py -f ./output_extended/Adept_F.csv --ftime 193.94 -r ./output_extended/Adept_R.csv --rtime 61.853 && ps2pdf ./adept_glob.eps && ps2pdf ./adept_shm.eps
 ```
 
 ## References

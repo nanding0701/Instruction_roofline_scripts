@@ -19,6 +19,20 @@ __pycache__
 settings.json
 *.swp
 
+# merge.sh output files
+*.csv
+
+# image files
+*.eps
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.tif
+*.gif
+*.raw
+
+
 # misc
 *.autosave
 /coverage.info

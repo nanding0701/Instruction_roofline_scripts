@@ -1,5 +1,19 @@
 #!/bin/bash -le
 
+# print usage
+function usage() {
+    echo "USAGE: merge.sh </path/to/extended_output>"
+}
+
+# if no input params
+if [ -z "$1" ]; then 
+    usage
+    exit -1
+fi
+
+# extended_output path
+OPATH=${1}
+
 # list of kernels
 kernels=(Adept_F Adept_R)
 
@@ -13,17 +27,17 @@ event=(inst_executed thread_inst_executed)
 for kernel in ${kernels[@]}
 do
 	echo ${kernel}
-	filename="${kernel}"
+	filename="${OPATH}/${kernel}"
 	echo ${filename}
 
-	# write header
-	echo "metric,value" >> ${filename}.csv
+	# remove previous file if exists
+	rm -rf ${filename}
 
 	# write all metrics
 	for m in ${metric[@]}
 	do
 		echo $m
-		data=`grep -rin -E "${kernel}.*\"${m}\"" ./${kernel}_*.log | awk -F',' '{print $7,$11}'`  
+		data=`grep -rin -E "${kernel}.*\"${m}\"" ${OPATH}/${kernel}_*.log | awk -F',' '{print $NF}'`  
 		echo "${m},${data}" >> ${filename}.csv
 	done
 
@@ -31,7 +45,7 @@ do
 	for e in ${event[@]}
 	do
 		echo $e
-		data=`grep -rin -E "${kernel}.*\"${e}\"" ./${kernel}_event.log | awk -F',' '{print $7,$10}'`  
+		data=`grep -rin -E "${kernel}.*\"${e}\"" ${OPATH}/${kernel}_event.log | awk -F',' '{print $NF}'`  
 		echo "${e},${data}" >> ${filename}.csv
 	done
 

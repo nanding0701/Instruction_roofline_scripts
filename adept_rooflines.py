@@ -195,6 +195,14 @@ if __name__ == '__main__':
     parser.add_argument('-f', '--ifwd', dest='fpath', type=str, required=True,
                         help='Path to Adept_F csv file')
 
+    # Adept_F kernel runtime
+    parser.add_argument('-ft', '--ftime', dest='ftime', type=float, required=True,
+                        help='Adept_F kernel runtime in milliseconds (see: output_extended/clean.log)')
+
+    # Adept_R kernel runtime
+    parser.add_argument('-rt', '--rtime', dest='rtime', type=float, required=True,
+                        help='Adept_R kernel runtime in milliseconds (see: output_extended/clean.log)')
+
     # Adept_R CSV file
     parser.add_argument('-r', '--idir', dest='rpath', type=str, required=True,
                         help='Path to Adept_R csv file')
@@ -225,10 +233,14 @@ if __name__ == '__main__':
     #
 
     # runtime of forward kernel
-    adept_f_runtime = 193.94 * 1e-3
+    adept_f_runtime = args.ftime * 1e-3
 
     # runtime for reverse kernel
-    adept_r_runtime = 61.853 * 1e-3
+    adept_r_runtime = args.rtime * 1e-3
+
+    if (adept_f_runtime <= 0 or adept_r_runtime <= 0):
+        print ('ERROR: --ftime and --rtime must be > 0')
+        sys.exit (-2)
 
     #
     # Machine parameters
